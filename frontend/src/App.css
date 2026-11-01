@@ -1,0 +1,98 @@
+.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  text-align: left;
+}
+
+.dropzone {
+  display: block;
+  padding: 2rem 1rem;
+  border: 2px dashed #888;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropzone:hover {
+  border-color: #646cff;
+}
+
+.modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.mode.selected {
+  border-color: #646cff;
+  background: rgba(100, 108, 255, 0.2);
+}
+
+.mode:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.progress {
+  opacity: 0.7;
+}
+
+.error {
+  color: #d33;
+}
+
+.result {
+  margin-top: 1.5rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.prose {
+  line-height: 1.5;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border: 1px solid #8884;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.diagram {
+  overflow-x: auto;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.slides {
+  display: grid;
+  gap: 1rem;
+}
+
+.slide {
+  border: 1px solid #8886;
+  border-radius: 8px;
+  padding: 0.5rem 1.25rem;
+  aspect-ratio: 16 / 9;
+  overflow: auto;
+}
+
+a.button {
+  border: 1px solid #8886;
+  border-radius: 8px;
+  padding: 0.6em 1.2em;
+  text-decoration: none;
+}
