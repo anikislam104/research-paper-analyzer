@@ -5,6 +5,18 @@ import { download, toCsv, toMarkdown } from './export'
 import { Diagram } from './Diagram'
 import './App.css'
 
+const DESCRIPTIONS: Record<string, string> = {
+  summary: 'A concise overview of the whole paper',
+  sections: 'A short summary of each section',
+  oneline: 'The paper in a single sentence',
+  diagram: 'A flowchart of the method',
+  slides: 'A slide deck you can download as .pptx',
+  scope: 'The problem, its scope and the contributions',
+  results: 'Key numbers and how they compare',
+  dataset: 'Datasets used, sizes and splits',
+  limitations: 'What the authors admit, and what may be missing',
+}
+
 function ResultView({ result, onSvg }: { result: Result; onSvg: (svg: string) => void }) {
   switch (result.type) {
     case 'table':
@@ -98,6 +110,14 @@ export default function App() {
   const [running, setRunning] = useState(false)
   const [jobId, setJobId] = useState('')
   const [svg, setSvg] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  function copy() {
+    if (!result) return
+    navigator.clipboard.writeText(toMarkdown(result))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   useEffect(() => {
     getModes().then(setModes).catch((e) => setError(e.message))
@@ -148,9 +168,18 @@ export default function App() {
 
   return (
     <main className="app">
-      <h1>Paper Analyzer</h1>
+      <header className="header">
+        <span className="logo" aria-hidden>
+          ◩
+        </span>
+        <div>
+          <h1>Paper Analyzer</h1>
+          <p className="tagline">Upload a research paper and get the part you need. Runs locally, nothing is stored.</p>
+        </div>
+      </header>
+
       <label
-        className="dropzone"
+        className={paper ? 'dropzone has-file' : 'dropzone'}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault()
@@ -158,15 +187,26 @@ export default function App() {
         }}
       >
         <input type="file" accept="application/pdf" hidden onChange={(e) => handleFile(e.target.files?.[0])} />
-        {uploading
-          ? 'Reading PDF…'
-          : paper
-            ? `${paper.title} — ${paper.page_count} pages (click to replace)`
-            : 'Drop a PDF here or click to choose'}
+        {uploading ? (
+          <span className="drop-title">Reading PDF…</span>
+        ) : paper ? (
+          <>
+            <span className="drop-title">{paper.title}</span>
+            <span className="drop-hint">
+              {paper.page_count} {paper.page_count === 1 ? 'page' : 'pages'} · {paper.char_count.toLocaleString()} characters · click to replace
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="drop-title">Drop a PDF here, or click to choose</span>
+            <span className="drop-hint">Text-based PDFs up to 20 MB</span>
+          </>
+        )}
       </label>
 
       {paper && (
-        <>
+        <section className="panel">
+          <h2>What would you like?</h2>
           <div className="modes">
             {modes.map((m) => (
               <button
@@ -176,47 +216,59 @@ export default function App() {
                 title={m.available ? '' : 'Coming soon'}
                 onClick={() => setMode(m.id)}
               >
-                {m.label}
+                <span className="mode-label">{m.label}</span>
+                <span className="mode-desc">{DESCRIPTIONS[m.id]}</span>
               </button>
             ))}
           </div>
-          <button className="analyze" disabled={!mode || running} onClick={analyze}>
-            {running ? 'Analyzing…' : 'Analyze'}
-          </button>
-          {running && (
-            <p className="progress">
-              {progress} <button onClick={() => cancelJob(jobId)}>Cancel</button>
-            </p>
-          )}
-        </>
+          <div className="run-row">
+            <button className="primary" disabled={!mode || running} onClick={analyze}>
+              {running ? 'Analyzing…' : 'Analyze'}
+            </button>
+            {running && (
+              <>
+                <span className="spinner" aria-hidden />
+                <span className="progress">{progress}</span>
+                <button className="ghost" onClick={() => cancelJob(jobId)}>
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+        </section>
       )}
 
       {error && <p className="error">{error}</p>}
 
       {result && (
-        <section className="result">
-          <div className="actions">
-            <button onClick={() => navigator.clipboard.writeText(toMarkdown(result))}>Copy</button>
-            <button onClick={() => download(`${mode}.md`, toMarkdown(result), 'text/markdown')}>Download .md</button>
-            <button onClick={() => download(`${mode}.json`, JSON.stringify(result, null, 2), 'application/json')}>
-              Download .json
-            </button>
-            {result.type === 'table' && (
-              <button onClick={() => download(`${mode}.csv`, toCsv(result.columns, result.rows), 'text/csv')}>
-                Download .csv
+        <section className="panel result">
+          <div className="result-head">
+            <h2>{modes.find((m) => m.id === mode)?.label}</h2>
+            <div className="actions">
+              <button onClick={copy}>{copied ? 'Copied ✓' : 'Copy'}</button>
+              <button onClick={() => download(`${mode}.md`, toMarkdown(result), 'text/markdown')}>.md</button>
+              <button onClick={() => download(`${mode}.json`, JSON.stringify(result, null, 2), 'application/json')}>
+                .json
               </button>
-            )}
-            {result.type === 'diagram' && (
-              <>
-                <button disabled={!svg} onClick={() => download('diagram.svg', svg, 'image/svg+xml')}>Download .svg</button>
-                <button onClick={() => download('diagram.mmd', result.mermaid, 'text/plain')}>Download .mmd</button>
-              </>
-            )}
-            {result.type === 'slides' && (
-              <a className="button" href={`/api/jobs/${jobId}/pptx`} download>
-                Download .pptx
-              </a>
-            )}
+              {result.type === 'table' && (
+                <button onClick={() => download(`${mode}.csv`, toCsv(result.columns, result.rows), 'text/csv')}>
+                  .csv
+                </button>
+              )}
+              {result.type === 'diagram' && (
+                <>
+                  <button disabled={!svg} onClick={() => download('diagram.svg', svg, 'image/svg+xml')}>
+                    .svg
+                  </button>
+                  <button onClick={() => download('diagram.mmd', result.mermaid, 'text/plain')}>.mmd</button>
+                </>
+              )}
+              {result.type === 'slides' && (
+                <a className="button" href={`/api/jobs/${jobId}/pptx`} download>
+                  .pptx
+                </a>
+              )}
+            </div>
           </div>
           <ResultView result={result} onSvg={setSvg} />
         </section>
