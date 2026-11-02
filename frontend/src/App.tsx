@@ -103,7 +103,7 @@ function ResultView({ result, onSvg }: { result: Result; onSvg: (svg: string) =>
 export default function App() {
   const [paper, setPaper] = useState<PaperInfo | null>(null)
   const [modes, setModes] = useState<Mode[]>([])
-  const [mode, setMode] = useState('')
+  const [mode, setMode] = useState('summary')
   const [result, setResult] = useState<Result | null>(null)
   const [progress, setProgress] = useState({ message: '', done: 0, total: 0 })
   const [startedAt, setStartedAt] = useState(0)
@@ -113,6 +113,7 @@ export default function App() {
   const [jobId, setJobId] = useState('')
   const [svg, setSvg] = useState('')
   const [copied, setCopied] = useState(false)
+  const [dragging, setDragging] = useState(false)
 
   function copy() {
     if (!result) return
@@ -174,22 +175,35 @@ export default function App() {
   return (
     <main className="app">
       <header className="header">
-        <img className="logo" src="/favicon.svg" alt="" width="44" height="44" />
-        <div>
-          <h1>Paper Analyzer</h1>
-          <p className="tagline">Upload a research paper and get the part you need. Runs locally, nothing is stored.</p>
-        </div>
+        <a className="brand" href="/" aria-label="Paper Analyzer home">
+          <span className="brand-mark" aria-hidden="true">P<span>&#8599;</span></span>
+          <span>paper<span className="brand-light">analyzer</span></span>
+        </a>
+        <span className="workspace-label">Your research workspace</span>
       </header>
 
+      <section className="intro">
+        <span className="eyebrow">YOUR RESEARCH BUDDY IS HERE</span>
+        <h1>Big ideas. <em>Clearer insights.</em></h1>
+        <p>Summaries, key findings, diagrams, and more &mdash; from your research paper.</p>
+      </section>
+
+      <div className="workspace">
+      <section className="upload-panel panel">
+        <div className="section-heading"><span className="step">01</span><h2>Add your paper</h2></div>
+        <p className="section-description">A little context for your next big idea.</p>
       <label
-        className={paper ? 'dropzone has-file' : 'dropzone'}
-        onDragOver={(e) => e.preventDefault()}
+        className={`dropzone${paper ? ' has-file' : ''}${dragging ? ' dragging' : ''}${running || uploading ? ' busy' : ''}`}
+        onDragOver={(e) => { e.preventDefault(); if (!running && !uploading) setDragging(true) }}
+        onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
           e.preventDefault()
-          handleFile(e.dataTransfer.files[0])
+          setDragging(false)
+          if (!running && !uploading) handleFile(e.dataTransfer.files[0])
         }}
       >
-        <input type="file" accept="application/pdf" hidden onChange={(e) => handleFile(e.target.files?.[0])} />
+        <input className="file-input" type="file" accept="application/pdf" disabled={running || uploading} onChange={(e) => handleFile(e.target.files?.[0])} />
+        <span className="upload-icon" aria-hidden="true">{paper ? '\u2713' : '\u21a5'}</span>
         {uploading ? (
           <span className="drop-title">Reading PDF…</span>
         ) : paper ? (
@@ -201,32 +215,39 @@ export default function App() {
           </>
         ) : (
           <>
-            <span className="drop-title">Drop a PDF here, or click to choose</span>
-            <span className="drop-hint">Text-based PDFs up to 20 MB</span>
+            <span className="drop-title">Drop your paper here</span>
+            <span className="drop-hint">or browse files from your computer</span>
+            <span className="browse-button">Choose a PDF <span aria-hidden="true">&#8599;</span></span>
+            <span className="file-note">PDF format &middot; Text-based &middot; Up to 20 MB</span>
           </>
         )}
       </label>
 
-      {paper && (
-        <section className="panel">
-          <h2>What would you like?</h2>
+        <div className="paper-tip"><span aria-hidden="true">&#10023;</span><p><strong>From dense to digestible.</strong><br />Start with a summary, then explore the details that matter to you.</p></div>
+      </section>
+        <section className="panel analysis-panel">
+          <div className="section-heading"><span className="step">02</span><h2>Choose your perspective</h2></div>
+          <p className="section-description">What would you like to take away?</p>
           <div className="modes">
             {modes.map((m) => (
               <button
                 key={m.id}
                 className={m.id === mode ? 'mode selected' : 'mode'}
                 disabled={!m.available || running}
+                aria-pressed={m.id === mode}
                 title={m.available ? '' : 'Coming soon'}
                 onClick={() => setMode(m.id)}
               >
+                <span className="mode-top"><span className="mode-symbol" aria-hidden="true">{({ summary: '\u2261', sections: '\u25a4', oneline: '\u21b3', diagram: '\u2318', slides: '\u25b1', scope: '\u25ce', results: '\u2197', dataset: '\u25a6', limitations: '\u25c8' } as Record<string, string>)[m.id]}</span><span className="selection-dot" /></span>
                 <span className="mode-label">{m.label}</span>
                 <span className="mode-desc">{DESCRIPTIONS[m.id]}</span>
               </button>
             ))}
           </div>
           <div className="run-row">
-            <button className="primary" disabled={!mode || running} onClick={analyze}>
-              {running ? 'Analyzing…' : 'Analyze'}
+            <span className="run-hint">{paper ? 'Your paper is ready to explore.' : 'Upload a paper to get started.'}</span>
+            <button className="primary" disabled={!paper || !mode || running || uploading} onClick={analyze}>
+              {running ? 'Analyzing...' : <>Analyze paper <span aria-hidden="true">&#8599;</span></>}
             </button>
             {running && (
               <button className="ghost" onClick={() => cancelJob(jobId)}>
@@ -236,9 +257,9 @@ export default function App() {
           </div>
           {running && <ProgressBar mode={mode} {...progress} startedAt={startedAt} />}
         </section>
-      )}
+      </div>
 
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
 
       {result && (
         <section className="panel result">
@@ -273,6 +294,7 @@ export default function App() {
           <ResultView result={result} onSvg={setSvg} />
         </section>
       )}
+      <footer className="footer"><span>Made for curious minds.</span><span>Read less. Discover more.</span></footer>
     </main>
   )
 }
