@@ -15,14 +15,11 @@
 }
 
 .logo {
-  display: grid;
-  place-items: center;
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 10px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 1.4rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  box-shadow: var(--shadow);
+  border-radius: 12px;
 }
 
 .tagline {
@@ -127,24 +124,42 @@ button.ghost {
   color: var(--muted);
 }
 
-.progress {
+.progress-block {
+  margin-top: 1rem;
+}
+
+.bar {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.5rem;
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: 0.8rem;
 }
 
-.spinner {
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+.progress-msg {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.progress-meta span:last-child {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .error {

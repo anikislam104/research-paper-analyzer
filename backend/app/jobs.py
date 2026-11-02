@@ -14,7 +14,7 @@ def create(paper_id: str, mode: str) -> str:
         del _jobs[k]
     job_id = uuid.uuid4().hex[:12]
     _jobs[job_id] = {"id": job_id, "paper_id": paper_id, "mode": mode, "status": "running",
-                     "progress": "Starting", "result": None, "error": None, "created": now}
+                     "progress": "Starting", "done": 0, "total": 0, "result": None, "error": None, "created": now}
     return job_id
 
 
@@ -39,10 +39,14 @@ def cancel(job_id: str) -> bool:
 def run(job_id: str, paper: dict) -> None:
     job = _jobs[job_id]
 
-    def progress(message: str) -> None:
+    def progress(message: str, done: int | None = None, total: int | None = None) -> None:
         if job.get("cancelled"):
             raise Cancelled
         job["progress"] = message
+        if done is not None:
+            job["done"] = done
+        if total is not None:
+            job["total"] = total
 
     try:
         result = HANDLERS[job["mode"]](paper, progress)

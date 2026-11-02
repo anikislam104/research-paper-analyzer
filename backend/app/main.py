@@ -50,7 +50,7 @@ def job_status(job_id: str):
     job = jobs.get(job_id)
     if job is None:
         raise HTTPException(404, "Job not found.")
-    return {k: job[k] for k in ("id", "mode", "status", "progress", "result", "error")}
+    return {k: job[k] for k in ("id", "mode", "status", "progress", "done", "total", "result", "error")}
 
 
 @app.post("/api/jobs/{job_id}/cancel")

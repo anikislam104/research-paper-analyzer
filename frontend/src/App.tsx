@@ -3,6 +3,7 @@ import Markdown from 'react-markdown'
 import { cancelJob, getJob, getModes, startAnalysis, uploadPaper, type Mode, type PaperInfo, type Result } from './api'
 import { download, toCsv, toMarkdown } from './export'
 import { Diagram } from './Diagram'
+import { ProgressBar, recordDuration } from './ProgressBar'
 import './App.css'
 
 const DESCRIPTIONS: Record<string, string> = {
@@ -104,7 +105,8 @@ export default function App() {
   const [modes, setModes] = useState<Mode[]>([])
   const [mode, setMode] = useState('')
   const [result, setResult] = useState<Result | null>(null)
-  const [progress, setProgress] = useState('')
+  const [progress, setProgress] = useState({ message: '', done: 0, total: 0 })
+  const [startedAt, setStartedAt] = useState(0)
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
   const [running, setRunning] = useState(false)
@@ -144,14 +146,17 @@ export default function App() {
     setResult(null)
     setSvg('')
     setRunning(true)
-    setProgress('Starting')
+    const startedAtMs = Date.now()
+    setStartedAt(startedAtMs)
+    setProgress({ message: 'Starting', done: 0, total: 0 })
     try {
       const jobId = await startAnalysis(paper.paper_id, mode)
       setJobId(jobId)
       for (;;) {
         const job = await getJob(jobId)
-        setProgress(job.progress)
+        setProgress({ message: job.progress, done: job.done, total: job.total })
         if (job.status === 'done') {
+          if (job.total <= 1) recordDuration(mode, (Date.now() - startedAtMs) / 1000)
           setResult(job.result)
           break
         }
@@ -169,9 +174,7 @@ export default function App() {
   return (
     <main className="app">
       <header className="header">
-        <span className="logo" aria-hidden>
-          ◩
-        </span>
+        <img className="logo" src="/favicon.svg" alt="" width="44" height="44" />
         <div>
           <h1>Paper Analyzer</h1>
           <p className="tagline">Upload a research paper and get the part you need. Runs locally, nothing is stored.</p>
@@ -226,15 +229,12 @@ export default function App() {
               {running ? 'Analyzing…' : 'Analyze'}
             </button>
             {running && (
-              <>
-                <span className="spinner" aria-hidden />
-                <span className="progress">{progress}</span>
-                <button className="ghost" onClick={() => cancelJob(jobId)}>
-                  Cancel
-                </button>
-              </>
+              <button className="ghost" onClick={() => cancelJob(jobId)}>
+                Cancel
+              </button>
             )}
           </div>
+          {running && <ProgressBar mode={mode} {...progress} startedAt={startedAt} />}
         </section>
       )}
 

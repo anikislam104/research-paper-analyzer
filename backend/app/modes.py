@@ -1,9 +1,10 @@
-from typing import Callable
+from typing import Callable, Protocol
 
 from . import llm
 from .sections import find, split_sections
 
-Progress = Callable[[str], None]
+class Progress(Protocol):
+    def __call__(self, message: str, done: int | None = None, total: int | None = None) -> None: ...
 
 MODES = {
     "summary": "Summarize",
@@ -18,17 +19,26 @@ MODES = {
 }
 
 
-def _section_summaries(paper: dict, progress: Progress) -> list[dict]:
+def _section_summaries(paper: dict, progress: Progress, extra_calls: int = 0) -> list[dict]:
+    """Summarize each section. `extra_calls` reserves model calls the caller makes afterwards."""
     sections = split_sections(paper["text"])
+    total = sum(llm.calls_for(s["text"]) for s in sections) + extra_calls
+    state = {"done": 0}
+
+    def tick() -> None:
+        state["done"] += 1
+        progress(state["msg"], state["done"], total)
+
     items = []
     for i, s in enumerate(sections, 1):
-        progress(f"Summarizing section {i}/{len(sections)}: {s['title']}")
-        items.append({"section": s["title"], "summary": llm.summarize_text(s["text"])})
+        state["msg"] = f"Summarizing section {i}/{len(sections)}: {s['title']}"
+        progress(state["msg"], state["done"], total)
+        items.append({"section": s["title"], "summary": llm.summarize_text(s["text"], tick=tick)})
     return items
 
 
 def summary(paper: dict, progress: Progress) -> dict:
-    items = _section_summaries(paper, progress)
+    items = _section_summaries(paper, progress, extra_calls=1)
     progress("Writing overall summary")
     notes = "\n".join(f"{i['section']}: {i['summary']}" for i in items)
     text = llm.chat(
@@ -213,7 +223,7 @@ SLIDES_SCHEMA = {
 
 
 def slides(paper: dict, progress: Progress) -> dict:
-    items = _section_summaries(paper, progress)
+    items = _section_summaries(paper, progress, extra_calls=1)
     progress("Designing slides")
     notes = "\n".join(f"{i['section']}: {i['summary']}" for i in items)
     data = llm.chat_json(

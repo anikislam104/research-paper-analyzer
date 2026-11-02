@@ -22,6 +22,8 @@ export type Job = {
   mode: string
   status: 'running' | 'done' | 'error' | 'cancelled'
   progress: string
+  done: number
+  total: number
   result: Result | null
   error: string | null
 }

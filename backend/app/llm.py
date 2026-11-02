@@ -1,4 +1,5 @@
 import json
+from typing import Callable
 
 import httpx
 
@@ -63,13 +64,31 @@ def chunk_text(text: str, size: int | None = None) -> list[str]:
     return chunks
 
 
-def summarize_text(text: str, instruction: str = "Summarize the following text in 3-5 sentences.") -> str:
-    """Map-reduce summary that fits small context windows."""
+def calls_for(text: str) -> int:
+    """Number of model calls summarize_text will make for this text."""
+    n = len(chunk_text(text))
+    return 1 if n == 1 else n + 1
+
+
+def summarize_text(
+    text: str,
+    instruction: str = "Summarize the following text in 3-5 sentences.",
+    tick: Callable[[], None] | None = None,
+) -> str:
+    """Map-reduce summary that fits small context windows. `tick` is called after each model call."""
+    tick = tick or (lambda: None)
     chunks = chunk_text(text)
     if len(chunks) == 1:
-        return chat(f"{instruction}\n\n{chunks[0]}")
-    parts = [chat(f"Summarize this excerpt in 2-3 sentences.\n\n{c}") for c in chunks]
-    return chat(f"{instruction}\n\nExcerpt summaries:\n" + "\n".join(f"- {p}" for p in parts))
+        out = chat(f"{instruction}\n\n{chunks[0]}")
+        tick()
+        return out
+    parts = []
+    for c in chunks:
+        parts.append(chat(f"Summarize this excerpt in 2-3 sentences.\n\n{c}"))
+        tick()
+    out = chat(f"{instruction}\n\nExcerpt summaries:\n" + "\n".join(f"- {p}" for p in parts))
+    tick()
+    return out
 
 
 def clip(text: str, chars: int | None = None) -> str:
